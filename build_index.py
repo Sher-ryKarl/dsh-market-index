@@ -95,6 +95,10 @@ def main():
         if not latest or latest not in (pack.get("versions") or {}):
             continue
         version = pack["versions"][latest]
+        # 市场只安装 bundle；没声明 dsh.bundle 的包放进去点了也会失败
+        dsh_field = version.get("dsh")
+        if not (isinstance(dsh_field, dict) and dsh_field.get("bundle")):
+            continue
         desc = (pack.get("description") or "").strip() or name
         repo_url = normalize_url(
             (version.get("repository") or pack.get("repository") or {}).get("url")
