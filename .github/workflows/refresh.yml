@@ -1,0 +1,35 @@
+name: refresh-index
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build index
+        run: python build_index.py 120
+      - name: Verify against official parser
+        run: |
+          npm i --no-audit --no-fund @deepseek-ai/dsh-plugin-market-index@0.2.1-alpha.4
+          node -e "const{parseMarketIndex}=require('@deepseek-ai/dsh-plugin-market-index');const d=JSON.parse(require('fs').readFileSync('market-index.json','utf8'));const p=parseMarketIndex(d,'https://example.com/market-index.json');console.log('ok',p.plugins.length);"
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet market-index.json; then
+            echo "no change"
+          else
+            git add market-index.json
+            git commit -m "chore: refresh index"
+            git push
+          fi
